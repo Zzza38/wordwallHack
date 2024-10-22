@@ -13,12 +13,9 @@ function prompt(query) {
 }
 
 function parseLeaderboardData(leaderboardData) {
-    // Check if the data is a string and attempt to replace single quotes with double quotes for valid JSON
     if (typeof leaderboardData === 'string') {
         try {
-            // Replace single quotes with double quotes
             leaderboardData = leaderboardData.replace(/'/g, '"');
-            // Parse the JSON string
             leaderboardData = JSON.parse(leaderboardData);
         } catch (error) {
             console.error('Failed to parse leaderboard data:', error);
@@ -26,34 +23,52 @@ function parseLeaderboardData(leaderboardData) {
         }
     }
 
-    // Check if the input is now a valid array and not empty
     if (!Array.isArray(leaderboardData) || leaderboardData.length === 0) {
         console.error('Invalid leaderboard data');
         return [];
     }
 
-    // Map over the leaderboard data to extract desired fields
-    return leaderboardData.map(entry => {
-        return {
-            entryId: entry.EntryId,
-            name: entry.Name,
-            score: entry.Score,
-            time: entry.Time
-        };
-    });
+    return leaderboardData.map(entry => ({
+        entryId: entry.EntryId,
+        name: entry.Name,
+        score: entry.Score,
+        time: entry.Time
+    }));
 }
 
+function parseLeaderboardOptions(str) {
+    if (!str) {
+        console.error("Leaderboard options data is undefined or null.");
+        return null;
+    }
 
+    let jsonString = str.replace(/'/g, '"');
 
+    jsonString = jsonString.replace(/True/g, 'true')
+        .replace(/False/g, 'false')
+        .replace(/None/g, 'null');
 
-function leaderboard(url, score, time, leaderboardFunc, name = null, params = null, templateId = 22) {
-    // Concatenate the leaderboard URL and function
+    if (jsonString.trim().charAt(0) !== '{') {
+        jsonString = `{${jsonString}}`;
+    }
+
+    try {
+        const data = JSON.parse(jsonString);
+        return data;
+    } catch (error) {
+        console.error("Error parsing JSON:", error);
+        return null;
+    }
+}
+
+async function leaderboard(url, score, time, leaderboardFunc, templateId, name = null, params = null) {
     let leaderboardURL = `https://wordwall.net/leaderboardajax/${leaderboardFunc}`;
-
     let mode = 1;
-    let activityId = url.split('/')[4];  // Extract activityId from the provided URL
+    let activityId = url.split('/')[4];
 
-    // Build the params string dynamically for form data if not provided
+    let paramsStr;
+    let paramsJson;
+
     if (params == null) {
         paramsStr = `score=${score}&time=${time}&name=${encodeURIComponent(name)}&mode=${mode}&activityId=${activityId}&templateId=${templateId}`;
         paramsJson = {
@@ -65,77 +80,49 @@ function leaderboard(url, score, time, leaderboardFunc, name = null, params = nu
             templateId: templateId
         };
     } else {
-        paramsStr = params
-        paramsJson = params
+        paramsStr = params;
+        paramsJson = params;
     }
 
-    // Make the POST request with the provided headers and params
-    if (leaderboardFunc != 'addentry') {
+    try {
+        let response;
         const headers = {
-            'Content-Type': 'application/json; charset=UTF-8',
+            'Content-Type': leaderboardFunc === 'addentry' ? 'application/x-www-form-urlencoded; charset=UTF-8' : 'application/json; charset=UTF-8',
             'Accept': '*/*',
             'Accept-Encoding': 'gzip, deflate, br, zstd',
             'Accept-Language': 'en-US,en;q=0.9',
             'Cache-Control': 'no-cache',
             'Origin': 'https://wordwall.net',
-            'Pragma': 'no-cache',
             'Referer': url,
-            'Sec-CH-UA': '"Not)A;Brand";v="99", "Opera";v="113", "Chromium";v="127"',
-            'Sec-CH-UA-Mobile': '?0',
-            'Sec-CH-UA-Platform': '"Windows"',
-            'Sec-Fetch-Dest': 'empty',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Site': 'same-origin',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36 OPR/113.0.0.0',
+            'User-Agent': 'Mozilla/5.0',
             'X-Requested-With': 'XMLHttpRequest',
             'X-Wordwall-Version': '1.0.9055.15470'
         };
-        axios.get(leaderboardURL, { headers, params: paramsJson }) // Use axios.get with correct params
-            .then((response) => {
-                if (leaderboardFunc == 'getentries') {
-                    const data = parseLeaderboardData(response.data); // Use 'response' correctly
-                    data.forEach(entry => {
-                        console.log(`Name: ${entry.name} ||| Score: ${entry.score} ||| Time: ${entry.time/1000}`);
-                    });
-                } else if (leaderboardFunc === 'getentryrank') {
-                    console.log(`You would be in place ${response.data}`);
-                }
 
-            })
-            .catch((error) => {
-                console.error('Axios Get Error:', error.message);
-                console.log('Axios Get URL: ' + leaderboardURL + '?' + new URLSearchParams({ activityId, templateId }).toString());
-            })
-            .finally(() => rl.close()); // Close the readline interface when done
-    } else {
-        const headers = {
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'Accept': '*/*',
-            'Accept-Encoding': 'gzip, deflate, br, zstd',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Cache-Control': 'no-cache',
-            'Origin': 'https://wordwall.net',
-            'Pragma': 'no-cache',
-            'Referer': url,
-            'Sec-CH-UA': '"Not)A;Brand";v="99", "Opera";v="113", "Chromium";v="127"',
-            'Sec-CH-UA-Mobile': '?0',
-            'Sec-CH-UA-Platform': '"Windows"',
-            'Sec-Fetch-Dest': 'empty',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Site': 'same-origin',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36 OPR/113.0.0.0',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-Wordwall-Version': '1.0.9055.15470'
-        };
-        axios.post(leaderboardURL, paramsStr, { headers }) // POST to the correct URL with params
-            .then((response) => {
-                console.log(`Success, added/moved ${name} into place ${response.data + 1}`);
-            })
-            .catch((error) => {
-                console.error('Axios Post Error:', error.message);
-                console.log('Axios Post URL: ' + leaderboardURL + '?' + params);
-            })
-            .finally(() => rl.close()); // Close the readline interface when done
+        if (leaderboardFunc !== 'addentry') {
+            response = await axios.get(leaderboardURL, { headers, params: paramsJson });
+        } else {
+            response = await axios.post(leaderboardURL, paramsStr, { headers });
+        }
+
+        if (leaderboardFunc === 'getentries') {
+            const data = parseLeaderboardData(response.data);
+            if (data.length > 0) {
+                data.forEach(entry => {
+                    console.log(`Name: ${entry.name} ||| Score: ${entry.score} ||| Time: ${entry.time / 1000}`);
+                });
+            } else {
+                console.log('No leaderboard entries found.');
+            }
+        } else if (leaderboardFunc === 'getentryrank') {
+            console.log(`You would be in place ${response.data}`);
+        } else if (leaderboardFunc === 'getoption') {
+            return response.data;
+        }
+    } catch (error) {
+        console.error('Error with leaderboard request:', error.message);
+    } finally {
+        rl.close();  // Ensure readline is closed properly
     }
 }
 
@@ -143,31 +130,108 @@ function leaderboard(url, score, time, leaderboardFunc, name = null, params = nu
     console.log('Welcome to the Wordwall Hack. Please choose a function;');
     let func = await prompt('Add Entry (1), Get Leaderboard (2), Get Entry Position on Leaderboard (3), Flood Leaderboard(4): ');
     let url = await prompt('Wordwall game URL: ');
+    let templateId;
+    let authorUserId;
+
+    try {
+        const response = await axios.get(url);
+        let data = String(response.data);
+        let search = "var s=window.ServerModel={};";
+        let start = data.indexOf(search);
+        if (start === -1) {
+            console.error("Search string not found in the response.");
+            return;
+        }
+
+        let end = data.indexOf("</script>", start);
+        if (end === -1) {
+            console.error("End of script block not found.");
+            return;
+        }
+        end--;
+
+        data = data.slice(start, end);
+
+        let nsearch = "s.templateId=Number(";
+        let nstart = data.indexOf(nsearch);
+        if (nstart === -1) {
+            console.error("Template ID search string not found.");
+            return;
+        }
+
+        let nend = data.indexOf(")", nstart);
+        if (nend === -1) {
+            console.error("Closing parenthesis not found for templateId.");
+            return;
+        }
+
+        templateId = Number(data.slice(nstart + nsearch.length, nend));
+        console.log(`Template ID: ${templateId}`);
+        
+        search = "s.authorUserId=Number(";
+        start = data.indexOf(search);
+        if (start === -1) {
+            console.error("Author User ID search string not found.");
+            return;
+        }
+
+        end = data.indexOf(")", start);
+        if (end === -1) {
+            console.error("Closing parenthesis not found for authorUserId.");
+            return;
+        }
+
+        authorUserId = Number(data.slice(start + search.length, end));
+        console.log('Author User ID:', authorUserId);
+    } catch (error) {
+        console.error('Axios Get Error:', error.message);
+        console.log('Axios Get URL: ' + url);
+    }
+
     let score;
     let time;
     let name;
-    let templateId;
-    if (func != 2) { // Check if func is not equal to 2
+    if (func != 2 && func != 4) {
         score = await prompt('Score: ');
         time = await prompt("Time (EX: 12.345): ");
-        templateId = await prompt('Template ID: ')
         time = parseFloat(time).toFixed(3);
         time = time.split('.')[0] + time.split('.')[1].padEnd(3, '0');
         time = time.replace('.', '');
     }
 
-    // Call the leaderboard function based on user input
     if (func == 1) {
         name = await prompt('Name: ');
-        leaderboard(url, score, time, 'addentry', name);
+        leaderboard(url, score, time, 'addentry', templateId, name);
     } else if (func == 2) {
-        leaderboard(url, null, null, 'getentries'); // No need to pass score and time
+        leaderboard(url, null, null, 'getentries', templateId);
     } else if (func == 3) {
-        leaderboard(url, score, time, 'getentryrank');
+        leaderboard(url, score, time, 'getentryrank', templateId);
     } else if (func == 4) {
+        time = "00001";
+        score = 69420;
+        let activityId = url.split('/')[4];
         name = await prompt('Name to flood leaderboard with: ');
-        for (let i = 0; i < 10; i++) {
-            leaderboard(url, score, time, 'addentry', name + i, null, templateId);
+
+        const paramsJson = {
+            activityId: activityId,
+            templateId: templateId,
+            authorUserId: authorUserId
+        };
+
+        let leaderboardStats = await leaderboard(url, score, time, 'getoption', templateId, null, paramsJson);
+        
+        if (leaderboardStats) {
+            leaderboardStats = parseLeaderboardOptions(leaderboardStats);
+            if (leaderboardStats && leaderboardStats.EntryCount) {
+                for (let i = 0; i < leaderboardStats.EntryCount; i++) {
+                    leaderboard(url, score, time, 'addentry', templateId, `${name}${i}`);
+                }
+                console.log('Leaderboard Flooded!')
+            } else {
+                console.log('No entries to flood or invalid leaderboard data.');
+            }
+        } else {
+            console.log('Could not retrieve leaderboard options.');
         }
     }
 })();

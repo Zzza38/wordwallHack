@@ -1,9 +1,9 @@
 {
-  "name": "coding",
+  "name": "Wordwall Hack",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "wordwallHack.js",
   "scripts": {
-    "wordwall": "node ./JS/wordwallHack.js"
+    "main": "node wordwallHack.js"
   },
   "author": "",
   "license": "ISC",
