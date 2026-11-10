@@ -1,0 +1,2 @@
+Welcome to the Wordwall Hack. Please choose a function;
+Add Entry (1), Get Leaderboard (2), Get Entry Position on Leaderboard (3), Flood Leaderboard(4): 

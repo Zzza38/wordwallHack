@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "wordwallHack.js",
   "scripts": {
-    "main": "node wordwallHack.js"
+    "start": "node wordwallHack.js",
+    "main": "node wordwallHack.js",
+    "test": "node --test test/*.test.js"
   },
   "author": "",
   "license": "ISC",
